@@ -1,23 +1,67 @@
 # Windows Setup Guide
 
-1. Open PowerShell in the project folder.
-2. Create and activate a virtual environment:
+## Prerequisites
+
+Install Python 3.11+, Node.js with `npx`, GitHub access for the target repositories, and ngrok for local webhook exposure.
+
+## Install
 
 ```powershell
+cd "C:\path\to\AI_Code_Review_Agent"
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-3. Copy `.env.example` to `.env`.
-4. Add `GEP_API_KEY`, `GITHUB_TOKEN`, and `GITHUB_WEBHOOK_SECRET` to `.env`; never commit it.
-5. Set `ALLOWED_REPOSITORIES=owner/repo` for production or `*` for a demo.
-6. Confirm `.vscode/mcp.json` is visible to VS Code and sign in to the official GitHub MCP server if using Copilot Agent mode.
-7. Start the app with `python -m uvicorn app.main:app --reload --port 8000`.
-8. Run `ngrok http 8000`, then configure GitHub's webhook URL as `<ngrok-url>/webhooks/github`.
-9. Select JSON and the Pull requests event, then create or update a test PR.
-10. Watch PowerShell logs and inspect the posted summary.
-11. Run `pytest -q`.
-12. Stop Uvicorn with `Ctrl+C`, deactivate with `deactivate`.
+Edit `.env` with the Generative Engine key, webhook secret, MCP token, and repository policy. Do not commit `.env`.
 
-For a local smoke test without GitHub or the model, keep `MOCK_EXTERNAL_SERVICES=true`; unit tests demonstrate signed requests without exposing credentials.
+## Configure the Local MCP Server
+
+The default configuration starts:
+
+```text
+npx -y @modelcontextprotocol/server-github
+```
+
+The application passes `GITHUB_MCP_TOKEN` to that process as `GITHUB_PERSONAL_ACCESS_TOKEN` and requires the tools listed in `GITHUB_MCP_TOOLS`.
+
+## Start FastAPI
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+Startup is successful only after MCP connects and required tools are discovered.
+
+## Start ngrok
+
+Open a second PowerShell window:
+
+```powershell
+ngrok http 8000
+```
+
+Copy the HTTPS forwarding URL.
+
+## Configure GitHub
+
+Create a repository webhook with:
+
+- URL: `<ngrok-https-url>/webhooks/github`
+- Content type: `application/json`
+- Secret: the value of `GITHUB_WEBHOOK_SECRET`
+- Event: `Pull requests`
+
+## Test
+
+Open or update a pull request in an allowed repository. Watch the FastAPI logs for MCP calls, the Generative Engine response, and `review_finished ... result=posted`. Then inspect the PR comment.
+
+## Local Test Mode
+
+Set `MOCK_EXTERNAL_SERVICES=true` to exercise the application without a real Generative Engine call. Unit tests always mock external services and never require GitHub credentials.
+
+## Stop
+
+Press `Ctrl+C` in the Uvicorn and ngrok terminals, then run `deactivate` if the virtual environment is active.

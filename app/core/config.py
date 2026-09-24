@@ -9,19 +9,13 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://openai.generative.engine.capgemini.com/v1"
     gep_api_key: str = ""
     model_name: str = "openai.gpt-5-mini"
-    github_token: str = ""
-    github_owner: str = ""
     github_webhook_secret: str = ""
     allowed_repositories: str = "*"
     allow_draft_reviews: bool = False
-    scm_provider: str = "mcp"
-    github_mcp_url: str = "https://api.githubcopilot.com/mcp/"
     github_mcp_token: str = ""
-    github_mcp_transport: str = "stdio"
     github_mcp_command: str = "npx"
     github_mcp_args: str = "-y @modelcontextprotocol/server-github"
-    github_mcp_tools: str = "get_pull_request_files,create_pull_request_review"
-    github_rest_fallback: bool = False
+    github_mcp_tools: str = "get_pull_request_comments,get_pull_request_files,add_issue_comment"
     max_files: int = Field(default=40, ge=1)
     max_file_diff_chars: int = Field(default=12000, ge=1000)
     max_review_input_chars: int = Field(default=100000, ge=10000)

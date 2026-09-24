@@ -13,9 +13,6 @@ class ChangedFile:
 
 class SCMProvider(ABC):
     @abstractmethod
-    async def get_pull_request(self, event: PullRequestEvent) -> dict: ...
-
-    @abstractmethod
     async def get_changed_files(self, event: PullRequestEvent) -> list[ChangedFile]: ...
 
     @abstractmethod

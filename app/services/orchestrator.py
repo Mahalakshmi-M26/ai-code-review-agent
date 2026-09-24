@@ -1,4 +1,3 @@
-import hashlib
 import logging
 from app.core.config import Settings
 from app.llm.client import LLMClient
@@ -28,7 +27,3 @@ class ReviewOrchestrator:
         await self.scm.post_review(event, body)
         logger.info("review_posted repository=%s pr=%s commit_sha=%s", event.full_name, event.pr_number, event.commit_sha)
         return "posted"
-
-
-def delivery_correlation_id(delivery_id: str, event: PullRequestEvent) -> str:
-    return hashlib.sha256(f"{delivery_id}:{event.full_name}:{event.pr_number}:{event.commit_sha}".encode()).hexdigest()[:16]

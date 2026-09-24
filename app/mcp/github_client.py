@@ -4,10 +4,8 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any
 
-import httpx2
-from mcp import Client, ClientSession
+from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.client.streamable_http import streamable_http_client
 from mcp.types import TextContent
 
 logger = logging.getLogger(__name__)
@@ -22,58 +20,37 @@ class MCPToolError(RuntimeError):
 
 
 class GitHubMCPClient:
-    def __init__(self, url: str, token: str, required_tools: set[str], timeout: float = 60, transport: str = "http", command: str = "npx", args: list[str] | None = None):
-        self.url = url
+    def __init__(self, token: str, required_tools: set[str], timeout: float = 60, command: str = "npx", args: list[str] | None = None):
         self.token = token
         self.required_tools = required_tools
         self.timeout = timeout
-        self.transport = transport.lower()
         self.command = command
         self.args = args or ["-y", "@modelcontextprotocol/server-github"]
         self._stack: AsyncExitStack | None = None
-        self._client: Client | None = None
         self._session: ClientSession | None = None
         self._tool_names: set[str] = set()
 
     @property
     def connected(self) -> bool:
-        return self._client is not None or self._session is not None
+        return self._session is not None
 
     async def connect(self) -> None:
         if self.connected:
             return
         if not self.token:
             raise MCPConnectionError("GITHUB_MCP_TOKEN is required for MCP mode")
-        logger.info("github_mcp_connecting transport=%s endpoint=%s", self.transport, self.url if self.transport == "http" else "local")
+        logger.info("github_mcp_connecting transport=stdio endpoint=local")
         stack = AsyncExitStack()
         try:
-            if self.transport == "http":
-                http_client = await stack.enter_async_context(
-                    httpx2.AsyncClient(
-                        headers={
-                            "Authorization": f"Bearer {self.token}",
-                            "X-MCP-Tools": ",".join(sorted(self.required_tools)),
-                        },
-                        timeout=httpx2.Timeout(self.timeout, read=self.timeout),
-                    )
-                )
-                transport = streamable_http_client(self.url, http_client=http_client)
-                client = await stack.enter_async_context(Client(transport))
-                self._client = client
-            elif self.transport == "stdio":
-                server = StdioServerParameters(
-                    command=self.command,
-                    args=self.args,
-                    env={**os.environ, "GITHUB_PERSONAL_ACCESS_TOKEN": self.token},
-                )
-                read, write = await stack.enter_async_context(stdio_client(server))
-                self._session = await stack.enter_async_context(ClientSession(read, write))
-                await self._session.initialize()
-            else:
-                raise MCPConnectionError("GITHUB_MCP_TRANSPORT must be http or stdio")
-            connected_client = self._client or self._session
-            assert connected_client is not None
-            tools_result = await connected_client.list_tools()
+            server = StdioServerParameters(
+                command=self.command,
+                args=self.args,
+                env={**os.environ, "GITHUB_PERSONAL_ACCESS_TOKEN": self.token},
+            )
+            read, write = await stack.enter_async_context(stdio_client(server))
+            self._session = await stack.enter_async_context(ClientSession(read, write))
+            await self._session.initialize()
+            tools_result = await self._session.list_tools()
             self._tool_names = {tool.name for tool in tools_result.tools}
             missing = self.required_tools - self._tool_names
             if missing:
@@ -99,7 +76,6 @@ class GitHubMCPClient:
         if self._stack is not None:
             await self._stack.aclose()
         self._stack = None
-        self._client = None
         self._session = None
         self._tool_names.clear()
 
@@ -111,11 +87,10 @@ class GitHubMCPClient:
         await self.connect()
         if name not in self._tool_names:
             raise MCPToolError(f"MCP tool is not available: {name}")
-        connected_client = self._client or self._session
-        assert connected_client is not None
+        assert self._session is not None
         logger.info("github_mcp_tool_call tool=%s", name)
         try:
-            result = await connected_client.call_tool(name, arguments)
+            result = await self._session.call_tool(name, arguments)
             if result.is_error:
                 raise MCPToolError(f"MCP tool returned an error: {name}")
             value = self._extract_content(result)

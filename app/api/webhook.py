@@ -4,7 +4,6 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 from app.core.config import get_settings
 from app.core.security import verify_github_signature
 from app.llm.client import LLMClient
-from app.scm.github_rest import GitHubRESTProvider
 from app.mcp.github_client import GitHubMCPClient
 from app.models.webhook import PullRequestEvent
 from app.scm.github_mcp import GitHubMCPProvider
@@ -18,14 +17,10 @@ _seen_deliveries: set[str] = set()
 
 def build_orchestrator(request: Request | None = None) -> ReviewOrchestrator:
     settings = get_settings()
-    if settings.scm_provider.lower() == "mcp":
-        if request is None or not hasattr(request.app.state, "github_mcp_client"):
-            raise RuntimeError("GitHub MCP client is not initialized")
-        mcp_client: GitHubMCPClient = request.app.state.github_mcp_client
-        rest_fallback = GitHubRESTProvider(settings.github_token) if settings.github_rest_fallback else None
-        scm = GitHubMCPProvider(mcp_client, rest_fallback, settings.github_rest_fallback)
-    else:
-        scm = GitHubRESTProvider(settings.github_token)
+    if request is None or not hasattr(request.app.state, "github_mcp_client"):
+        raise RuntimeError("GitHub MCP client is not initialized")
+    mcp_client: GitHubMCPClient = request.app.state.github_mcp_client
+    scm = GitHubMCPProvider(mcp_client)
     llm = LLMClient(settings.openai_base_url, settings.gep_api_key, settings.model_name, settings.review_timeout_seconds, settings.mock_external_services)
     return ReviewOrchestrator(settings, scm, llm)
 

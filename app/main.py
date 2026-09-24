@@ -12,19 +12,15 @@ configure_logging(settings.log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    mcp_client = None
-    if settings.scm_provider.lower() == "mcp":
-        mcp_client = GitHubMCPClient(
-            settings.github_mcp_url,
-            settings.github_mcp_token,
-            settings.github_mcp_tool_set,
-            settings.review_timeout_seconds,
-            settings.github_mcp_transport,
-            settings.github_mcp_command,
-            settings.github_mcp_arg_list,
-        )
-        await mcp_client.connect()
-        app.state.github_mcp_client = mcp_client
+    mcp_client = GitHubMCPClient(
+        settings.github_mcp_token,
+        settings.github_mcp_tool_set,
+        settings.review_timeout_seconds,
+        settings.github_mcp_command,
+        settings.github_mcp_arg_list,
+    )
+    await mcp_client.connect()
+    app.state.github_mcp_client = mcp_client
     try:
         yield
     finally:
