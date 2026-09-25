@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from app.api.webhook import router as webhook_router
-from app.core.config import get_settings
-from app.core.logging_config import configure_logging
-from app.mcp.github_client import GitHubMCPClient
+from app.config import get_settings
+from app.github_mcp import GitHubMCPClient
+from app.webhook import router as webhook_router
+import logging
 
 settings = get_settings()
-configure_logging(settings.log_level)
+logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO), format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
 @asynccontextmanager
@@ -15,7 +15,6 @@ async def lifespan(app: FastAPI):
     mcp_client = GitHubMCPClient(
         settings.github_mcp_token,
         settings.github_mcp_tool_set,
-        settings.review_timeout_seconds,
         settings.github_mcp_command,
         settings.github_mcp_arg_list,
     )

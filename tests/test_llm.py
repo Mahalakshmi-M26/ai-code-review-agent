@@ -1,5 +1,5 @@
 import pytest
-from app.llm.client import LLMClient
+from app.reviewer import LLMClient
 
 
 def test_malformed_model_response_is_rejected():

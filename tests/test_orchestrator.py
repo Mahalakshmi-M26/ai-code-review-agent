@@ -1,9 +1,7 @@
 import asyncio
-from app.core.config import Settings
-from app.models.review import ReviewResult
-from app.models.webhook import PullRequestEvent
-from app.scm.base import ChangedFile
-from app.services.orchestrator import ReviewOrchestrator
+from app.config import Settings
+from app.models import ChangedFile, PullRequestEvent, ReviewResult
+from app.reviewer import ReviewOrchestrator
 
 
 class FakeSCM:

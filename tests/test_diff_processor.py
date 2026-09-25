@@ -1,5 +1,5 @@
-from app.scm.base import ChangedFile
-from app.services.diff_processor import prepare_files
+from app.models import ChangedFile
+from app.reviewer import prepare_files
 
 
 def test_diff_processor_skips_generated_and_binary_files():

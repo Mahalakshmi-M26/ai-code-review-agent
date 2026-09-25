@@ -1,6 +1,6 @@
 import hashlib
 import hmac
-from app.core.security import verify_github_signature
+from app.security import verify_github_signature
 
 
 def test_signature_validation():

@@ -8,6 +8,8 @@ from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import TextContent
 
+from app.models import ChangedFile, PullRequestEvent
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,10 +22,9 @@ class MCPToolError(RuntimeError):
 
 
 class GitHubMCPClient:
-    def __init__(self, token: str, required_tools: set[str], timeout: float = 60, command: str = "npx", args: list[str] | None = None):
+    def __init__(self, token: str, required_tools: set[str], command: str = "npx", args: list[str] | None = None):
         self.token = token
         self.required_tools = required_tools
-        self.timeout = timeout
         self.command = command
         self.args = args or ["-y", "@modelcontextprotocol/server-github"]
         self._stack: AsyncExitStack | None = None
@@ -60,17 +61,11 @@ class GitHubMCPClient:
             logger.info("github_mcp_tools_discovered count=%s", len(self._tool_names))
         except Exception as exc:
             await stack.aclose()
-            logger.error("github_mcp_connection_failed error_type=%s detail=%s", type(exc).__name__, self._safe_error(exc))
+            self._session = None
+            logger.error("github_mcp_connection_failed error_type=%s detail=%s", type(exc).__name__, str(exc)[:300])
             if isinstance(exc, MCPConnectionError):
                 raise
             raise MCPConnectionError("Unable to connect to GitHub MCP Server") from exc
-
-    @staticmethod
-    def _safe_error(exc: Exception) -> str:
-        message = str(exc)
-        if "web-notification.capgemini.com" in message:
-            return "Hosted MCP endpoint was redirected by the corporate network; check corporate proxy or use an approved direct endpoint"
-        return message[:300]
 
     async def close(self) -> None:
         if self._stack is not None:
@@ -107,11 +102,28 @@ class GitHubMCPClient:
         structured = getattr(result, "structured_content", None)
         if structured is not None:
             return structured
-        text_parts = [block.text for block in getattr(result, "content", []) if isinstance(block, TextContent)]
-        text = "\n".join(text_parts).strip()
+        text = "\n".join(block.text for block in getattr(result, "content", []) if isinstance(block, TextContent)).strip()
         if not text:
             return None
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             return text
+
+
+class GitHubMCPProvider:
+    def __init__(self, client: GitHubMCPClient):
+        self.client = client
+
+    async def get_changed_files(self, event: PullRequestEvent) -> list[ChangedFile]:
+        result = await self.client.call_tool("get_pull_request_files", {"owner": event.owner, "repo": event.repository, "pull_number": event.pr_number})
+        entries = result.get("files", result) if isinstance(result, dict) else result
+        return [ChangedFile(item["filename"], item.get("status", "modified"), item.get("patch") or "", item.get("patch") is None) for item in entries or []]
+
+    async def post_review(self, event: PullRequestEvent, body: str) -> None:
+        await self.client.call_tool("add_issue_comment", {"owner": event.owner, "repo": event.repository, "issue_number": event.pr_number, "body": body})
+
+    async def has_review_marker(self, event: PullRequestEvent, marker: str) -> bool:
+        result = await self.client.call_tool("get_pull_request_comments", {"owner": event.owner, "repo": event.repository, "pull_number": event.pr_number})
+        comments = result.get("comments", result) if isinstance(result, dict) else result
+        return any(marker in item.get("body", "") for item in comments or [])

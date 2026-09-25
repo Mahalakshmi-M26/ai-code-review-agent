@@ -130,14 +130,13 @@ Before model processing, the orchestrator searches PR comments for `<!-- ai-code
 ```text
 app/
   main.py
-  api/webhook.py
-  core/{config.py,logging_config.py,security.py}
-  llm/client.py
-  mcp/github_client.py
-  models/{review.py,webhook.py}
+  config.py
+  security.py
+  webhook.py
+  github_mcp.py
+  reviewer.py
+  models.py
   rules/enterprise_review.md
-  scm/{base.py,github_mcp.py}
-  services/{diff_processor.py,orchestrator.py,prompt_builder.py,review_formatter.py}
 tests/
 docs/
 .env.example

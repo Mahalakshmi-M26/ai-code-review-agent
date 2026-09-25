@@ -12,9 +12,9 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** Where is MCP used? Answer: every GitHub read and write passes through the local MCP server.
 
-## 2. app/main.py
+## 2. app/main.py and app/config.py
 
-**WHAT TO SHOW:** Lifespan startup, MCP client construction, connection, cleanup, and `/health`.
+**WHAT TO SHOW:** Lifespan startup, MCP client construction, connection, cleanup, `/health`, and the environment settings used to configure them.
 
 **WHAT TO SAY:** The application does not accept reviews until local MCP connects and required tools are discovered.
 
@@ -22,7 +22,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** What happens if MCP is unavailable? Answer: startup fails closed.
 
-## 3. app/api/webhook.py
+## 3. app/webhook.py and app/security.py
 
 **WHAT TO SHOW:** Signature verification, event filtering, repository authorization, draft handling, delivery tracking, and background task.
 
@@ -32,7 +32,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** Which PR actions are processed? Answer: opened, reopened, synchronize, and ready_for_review.
 
-## 4. app/services/orchestrator.py
+## 4. app/reviewer.py
 
 **WHAT TO SHOW:** Marker check, changed-file retrieval, diff preparation, prompt build, model call, formatting, and posting.
 
@@ -42,7 +42,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** How are duplicates prevented? Answer: comment marker by commit SHA plus delivery tracking.
 
-## 5. app/scm/github_mcp.py
+## 5. app/github_mcp.py
 
 **WHAT TO SHOW:** The three MCP tool calls.
 
@@ -52,15 +52,15 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** Is GitHub REST used? Answer: no, not in the final POC.
 
-## 6. app/mcp/github_client.py
+## 6. app/models.py
 
-**WHAT TO SHOW:** `stdio_client`, `ClientSession`, token environment propagation, `list_tools`, `call_tool`, and cleanup.
+**WHAT TO SHOW:** `ChangedFile`, `PullRequestEvent`, `ReviewResult`, `ReviewFinding`, and severity validation.
 
-**WHAT TO SAY:** The Python service starts and owns the local MCP session. Runtime logs prove connection, discovery, and invocation.
+**WHAT TO SAY:** These Pydantic and dataclass contracts keep webhook, MCP, and model data explicit.
 
-**WHY IT MATTERS:** This is the concrete MCP implementation.
+**WHY IT MATTERS:** Typed contracts prevent malformed model output and ambiguous webhook data from reaching the action path.
 
-**POSSIBLE MENTOR QUESTION:** What does stdio mean? Answer: the MCP client communicates with a local child process through standard input/output streams.
+**POSSIBLE MENTOR QUESTION:** Why use Pydantic? Answer: it validates model output before formatting or posting.
 
 ## 7. app/rules/enterprise_review.md
 
@@ -72,7 +72,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** Can the model approve a PR? Answer: no; the policy and formatter keep human approval mandatory.
 
-## 8. app/services/prompt_builder.py
+## 8. app/reviewer.py policy and prompt sections
 
 **WHAT TO SHOW:** Policy loading, security boundary, PR metadata, and bounded diff prompt.
 
@@ -82,7 +82,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** Why not send the whole repository? Answer: cost, privacy, context quality, and attack surface.
 
-## 9. app/llm/client.py
+## 9. app/reviewer.py Generative Engine section
 
 **WHAT TO SHOW:** Generative Engine endpoint call, JSON response request, timeout, and parser.
 
@@ -92,7 +92,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** What happens on malformed output? Answer: validation fails closed and no comment is posted.
 
-## 10. app/models/review.py
+## 10. app/models.py
 
 **WHAT TO SHOW:** Severity enum, finding fields, line normalization, file counts, and `ReviewResult`.
 
@@ -102,7 +102,7 @@ Keep `.env` values hidden. Start Uvicorn and ngrok before the live portion.
 
 **POSSIBLE MENTOR QUESTION:** How are lowercase severities handled? Answer: the finding validator normalizes them before enum validation.
 
-## 11. app/services/review_formatter.py
+## 11. app/reviewer.py formatter section
 
 **WHAT TO SHOW:** Decision, risk, counts, findings, scope, disclaimer, and marker.
 

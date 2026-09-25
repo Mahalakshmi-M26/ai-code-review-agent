@@ -1,9 +1,8 @@
 import pytest
 
-from app.mcp import github_client as client_module
-from app.mcp.github_client import GitHubMCPClient, MCPToolError
-from app.models.webhook import PullRequestEvent
-from app.scm.github_mcp import GitHubMCPProvider
+from app import github_mcp as client_module
+from app.github_mcp import GitHubMCPClient, GitHubMCPProvider, MCPToolError
+from app.models import PullRequestEvent
 
 
 class FakeTool:

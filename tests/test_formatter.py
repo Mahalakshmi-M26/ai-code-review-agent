@@ -1,5 +1,5 @@
-from app.models.review import ReviewFinding, ReviewResult, Severity
-from app.services.review_formatter import format_review
+from app.models import ReviewFinding, ReviewResult, Severity
+from app.reviewer import format_review
 
 
 def test_formatter_includes_severity_and_marker():

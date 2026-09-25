@@ -1,6 +1,7 @@
 import shlex
 from functools import lru_cache
 from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
 
     @property
     def policy_path(self) -> Path:
-        return Path(__file__).parents[1] / "rules" / "enterprise_review.md"
+        return Path(__file__).parent / "rules" / "enterprise_review.md"
 
     @property
     def github_mcp_tool_set(self) -> set[str]:

@@ -1,7 +1,6 @@
-from app.core.config import Settings
-from app.models.webhook import PullRequestEvent
-from app.scm.base import ChangedFile
-from app.services.prompt_builder import PromptBuilder
+from app.config import Settings
+from app.models import ChangedFile, PullRequestEvent
+from app.reviewer import PromptBuilder
 
 
 def test_prompt_contains_policy_and_injection_boundary(tmp_path):

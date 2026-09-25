@@ -1,13 +1,13 @@
 import json
 import logging
+
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
-from app.core.config import get_settings
-from app.core.security import verify_github_signature
-from app.llm.client import LLMClient
-from app.mcp.github_client import GitHubMCPClient
-from app.models.webhook import PullRequestEvent
-from app.scm.github_mcp import GitHubMCPProvider
-from app.services.orchestrator import ReviewOrchestrator
+
+from app.config import get_settings
+from app.github_mcp import GitHubMCPClient, GitHubMCPProvider
+from app.models import PullRequestEvent
+from app.reviewer import LLMClient, ReviewOrchestrator
+from app.security import verify_github_signature
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -19,8 +19,7 @@ def build_orchestrator(request: Request | None = None) -> ReviewOrchestrator:
     settings = get_settings()
     if request is None or not hasattr(request.app.state, "github_mcp_client"):
         raise RuntimeError("GitHub MCP client is not initialized")
-    mcp_client: GitHubMCPClient = request.app.state.github_mcp_client
-    scm = GitHubMCPProvider(mcp_client)
+    scm = GitHubMCPProvider(request.app.state.github_mcp_client)
     llm = LLMClient(settings.openai_base_url, settings.gep_api_key, settings.model_name, settings.review_timeout_seconds, settings.mock_external_services)
     return ReviewOrchestrator(settings, scm, llm)
 
@@ -46,8 +45,7 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks, x_
     if delivery_id in _seen_deliveries:
         return {"status": "ignored", "reason": "duplicate delivery"}
     try:
-        payload = json.loads(raw)
-        event = PullRequestEvent.from_github_payload(payload, delivery_id)
+        event = PullRequestEvent.from_github_payload(json.loads(raw), delivery_id)
     except (ValueError, TypeError, KeyError) as exc:
         raise HTTPException(status_code=400, detail="Malformed GitHub payload") from exc
     if event.action not in RELEVANT_ACTIONS:

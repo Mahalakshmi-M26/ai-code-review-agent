@@ -3,8 +3,8 @@ import hmac
 import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from app.api import webhook
-from app.core.config import Settings
+from app import webhook
+from app.config import Settings
 
 
 def signed(payload, secret="secret"):

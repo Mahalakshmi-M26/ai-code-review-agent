@@ -59,7 +59,7 @@ flowchart LR
 
 ### Webhook
 
-`app/api/webhook.py` authenticates and routes supported pull-request events. It accepts `/webhooks/github` and a compatibility singular path.
+`app/webhook.py` authenticates and routes supported pull-request events. It accepts `/webhooks/github` and a compatibility singular path.
 
 ### FastAPI
 
@@ -67,19 +67,19 @@ flowchart LR
 
 ### Orchestrator
 
-`app/services/orchestrator.py` owns the review workflow and commit-marker idempotency check.
+`app/reviewer.py` owns the review workflow and commit-marker idempotency check.
 
 ### SCM Abstraction
 
-`app/scm/base.py` defines `ChangedFile` and the provider operations required by the workflow.
+`app/models.py` defines `ChangedFile`, `PullRequestEvent`, and the structured review contracts used by the workflow.
 
 ### GitHubMCPProvider
 
-`app/scm/github_mcp.py` maps provider operations to the verified MCP tools and converts file responses into `ChangedFile` objects.
+`app/github_mcp.py` owns the MCP client, provider operations, tool calls, and conversion of file responses into `ChangedFile` objects.
 
 ### GitHubMCPClient
 
-`app/mcp/github_client.py` starts the configured local process, passes the token through the environment, initializes `ClientSession`, discovers tools, invokes tools, extracts structured or text content, and closes the process cleanly.
+`app/github_mcp.py` starts the configured local process, passes the token through the environment, initializes `ClientSession`, discovers tools, invokes tools, extracts structured or text content, and closes the process cleanly.
 
 ### Stdio Transport
 
@@ -97,19 +97,19 @@ Stdio is the communication channel between the Python MCP client and the local G
 
 ### Prompt Builder
 
-`app/services/prompt_builder.py` labels repository content as untrusted data, includes policy and PR metadata, and requests a strict JSON schema.
+`app/reviewer.py` labels repository content as untrusted data, includes policy and PR metadata, and requests a strict JSON schema.
 
 ### Capgemini Generative Engine
 
-`app/llm/client.py` calls the configured OpenAI-compatible chat-completions endpoint. This HTTP call is for inference only; it is not GitHub REST.
+`app/reviewer.py` calls the configured OpenAI-compatible chat-completions endpoint. This HTTP call is for inference only; it is not GitHub REST.
 
 ### Pydantic Validation
 
-`app/models/review.py` validates the response shape, finding fields, severity values, line references, and file counts before formatting.
+`app/models.py` validates the response shape, finding fields, severity values, line references, and file counts before formatting.
 
 ### Review Formatter
 
-`app/services/review_formatter.py` creates a deterministic summary with decision, risk, severity counts, findings, scope, disclaimer, and commit marker.
+`app/reviewer.py` creates a deterministic summary with decision, risk, severity counts, findings, scope, disclaimer, and commit marker.
 
 ## Multi-Repository Support
 
