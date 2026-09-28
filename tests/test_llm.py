@@ -15,16 +15,18 @@ def test_structured_model_response_is_validated():
 def test_model_review_shape_is_normalized_before_formatting():
     result = LLMClient.parse_result(
         '{"decision":"CHANGES REQUIRED","risk_level":"High",'
+        '"merge_recommendation":"Fix the finding before merging.",'
         '"findings":[{"severity":"HIGH","category":"Security",'
         '"file":"app.py","line":"diff hunk starting at line 5",'
         '"title":"Unsafe input","issue":"Input is not validated.",'
-        '"impact":"Invalid data can reach the operation.",'
         '"recommendation":"Validate at the boundary.",'
-        '"suggested_fix":"Use a typed request model."}],'
+        '"suggested_fix":"validated = RequestModel.model_validate(raw)"}],'
         '"summary":"Review completed","files_reviewed":["app.py"],'
         '"files_skipped":[],"categories_reviewed":["Security"]}'
     )
     assert result.findings[0].line is None
+    assert result.findings[0].suggested_fix == "validated = RequestModel.model_validate(raw)"
+    assert result.merge_recommendation == "Fix the finding before merging."
     assert result.files_reviewed == 1
     assert result.files_skipped == 0
 
@@ -32,7 +34,7 @@ def test_model_review_shape_is_normalized_before_formatting():
 def test_model_severity_is_case_insensitive():
     result = LLMClient.parse_result(
         '{"findings":[{"severity":"low","category":"Testing",'
-        '"title":"Minor issue","issue":"Issue","impact":"Impact",'
-        '"recommendation":"Fix it","suggested_fix":"Apply the fix"}]}'
+        '"title":"Minor issue","issue":"Issue",'
+        '"recommendation":"Fix it","suggested_fix":"apply_fix()"}]}'
     )
     assert result.findings[0].severity.value == "LOW"

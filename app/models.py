@@ -64,9 +64,8 @@ class ReviewFinding(BaseModel):
     line: int | None = None
     title: str
     issue: str
-    impact: str
     recommendation: str
-    suggested_fix: str
+    suggested_fix: str | None = None
 
     @field_validator("severity", mode="before")
     @classmethod
@@ -89,6 +88,7 @@ class ReviewFinding(BaseModel):
 class ReviewResult(BaseModel):
     decision: str = "NO BLOCKING ISSUES"
     risk_level: str = "Low"
+    merge_recommendation: str = "Review findings before merging."
     findings: list[ReviewFinding] = Field(default_factory=list)
     summary: str = ""
     files_reviewed: int = 0

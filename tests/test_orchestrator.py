@@ -35,3 +35,32 @@ def test_orchestrator_posts_once_and_is_idempotent(tmp_path):
     assert len(scm.posted) == 1
     scm.duplicate = True
     assert asyncio.run(result.process(event)) == "duplicate"
+
+
+def test_orchestrator_keeps_only_lines_added_in_diff():
+    class DiffSCM(FakeSCM):
+        async def get_changed_files(self, event):
+            patch = "\n".join([
+                "@@ -75,2 +79,3 @@",
+                " context()",
+                "-old_call()",
+                "+new_call()",
+                "@@ -100,1 +102,0 @@",
+                "-removed_only()",
+            ])
+            return [ChangedFile("app.py", "modified", patch)]
+
+    class FindingsLLM:
+        async def review(self, prompt):
+            return ReviewResult(findings=[
+                {"severity": "MEDIUM", "category": "Reliability", "file": "app.py", "line": 80, "title": "Changed code", "issue": "Issue", "recommendation": "Fix", "suggested_fix": None},
+                {"severity": "LOW", "category": "Reliability", "file": "app.py", "line": 102, "title": "Deleted code", "issue": "Issue", "recommendation": "Fix", "suggested_fix": None},
+            ])
+
+    scm = DiffSCM()
+    settings = Settings()
+    event = PullRequestEvent(action="opened", repository="repo", owner="owner", pr_number=1, commit_sha="sha", branch="main")
+    asyncio.run(ReviewOrchestrator(settings, scm, FindingsLLM()).process(event))
+
+    assert "📍 Line 80" in scm.posted[0]
+    assert "📍 Line unavailable" in scm.posted[0]
